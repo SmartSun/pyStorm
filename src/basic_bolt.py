@@ -9,7 +9,7 @@ logger = logging.getLogger(__file__)
 
 class basic_bolt(thread.Thread):
     _in_sockets = {}
-    _out_socket = None
+    _out_sockets = {}
     id = None
     _poller = zmq.Poller()
     _in_tuple_count = 0
@@ -28,7 +28,8 @@ class basic_bolt(thread.Thread):
         pass
 
     def emit(self, data=None):
-        self.out_socket.send(data)
+        for s in self._out_sockets.values():
+            s.send(data)
         self._out_tuple_count += 1
 
     def init_in_sockets(self, id, type, servers):
@@ -43,14 +44,19 @@ class basic_bolt(thread.Thread):
             logger.warn(str(ex))
             return False
 
-    def init_out_socket(self, type, port):
+    def init_out_sockets(self, id, type, ports):
         try:
-            self._out_socket = zmq.Context().socket(type)
-            self._out_socket.bind("tcp://127.0.0.1:%s" % port)
-            return True
+            s = zmq.Context().socket(type)
+            for port in ports:
+                try:
+                    s.bind("tcp://127.0.0.1:%s" % port)
+                except:
+                    pass
+            self._out_sockets[id] = s
+            return port
         except Exception as ex:
             logger.warn(str(ex))
-            return False
+            return None
 
     def add_server(self, id, server):
         try:
@@ -75,7 +81,7 @@ class basic_bolt(thread.Thread):
         while 1:
             socks = dict(self._poller.poll())
             for s in self._in_sockets.values():
-                if s in socks and socks[s] == zmq.POLLIN:
+                if socks.get(s) == zmq.POLLIN:
                     data = s.recv()
                     self.process(data)
                     self._in_tuple_count += 1

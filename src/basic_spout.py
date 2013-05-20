@@ -9,7 +9,7 @@ logger = logging.getLogger(__file__)
 
 
 class basic_spout(thread.Thread):
-	_socket = None
+	_sockets = {}
 	id = None
 	_tuple_count = 0
 
@@ -26,17 +26,24 @@ class basic_spout(thread.Thread):
 		pass
 
 	def emit(self, data=None):
-		self._socket.send(data)
+		for s in self._sockets.values():
+			s.send(data)
 		self._tuple_count += 1
 
-	def init_socket(self, type, port):
+	def init_socket(self, id, type, ports):
 		try:
-			self._socket = zmq.Context().socket(type)
-			self._socket.bind("tcp://127.0.0.1:%s" % port)
-			return True
+			s = zmq.Context().socket(type)
+			for port in ports:
+				try:
+					s.bind("tcp://127.0.0.1:%s" % port)
+					break
+				except:
+					pass
+			self._sockets[id] = s
+			return port
 		except Exception as ex:
 			logger.warn(str(ex))
-			return False
+			return None
 
 	def register_zk_node(self):
 		pass
