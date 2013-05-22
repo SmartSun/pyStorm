@@ -32,7 +32,7 @@ class basic_bolt(thread.Thread):
         pass
 
     def emit(self, data=None):
-        send_msg(self._socket, self._streams, self._component_name, data)
+        send_msg(self._socket, self._out_streams, self._component_name, data)
         self._out_tuple_count += 1
 
     def init_in_sockets(self, stream_id, servers, id):
