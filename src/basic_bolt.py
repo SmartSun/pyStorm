@@ -14,6 +14,7 @@ class basic_bolt(thread.Thread):
     _out_socket = None
     _out_streams = {}
     _id = None
+    _component_name = None
     _poller = zmq.Poller()
     _in_tuple_count = 0
     _out_tuple_count = 0
@@ -24,14 +25,14 @@ class basic_bolt(thread.Thread):
         """
         pass
 
-    def process(self, data=None):
+    def process(self, data=None, component_name=None):
         """
         TODO: override this method with your own process code
         """
         pass
 
     def emit(self, data=None):
-        send_msg(self._socket, self._streams, data)
+        send_msg(self._socket, self._streams, self._component_name, data)
         self._out_tuple_count += 1
 
     def init_in_sockets(self, stream_id, servers, id):
@@ -85,6 +86,6 @@ class basic_bolt(thread.Thread):
             socks = dict(self._poller.poll())
             for s in self._in_sockets.values():
                 if socks.get(s) == zmq.POLLIN:
-                    msg_id, data = s.recv_pyobj()
-                    self.process(data)
+                    msg_id, component_name, data = s.recv_pyobj()
+                    self.process(data, component_name)
                     self._in_tuple_count += 1

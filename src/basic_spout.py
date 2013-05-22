@@ -13,6 +13,7 @@ logger = logging.getLogger(__file__)
 class basic_spout(thread.Thread):
 	_socket = None
 	_id = None
+	_component_name = None
 	_tuple_count = 0
 	_streams = {}
 
@@ -29,7 +30,7 @@ class basic_spout(thread.Thread):
 		pass
 
 	def emit(self, data=None):
-		send_msg(self._socket, self._streams, data)
+		send_msg(self._socket, self._streams, self._component_name, data)
 		self._tuple_count += 1
 
 	def init_socket(self, port):
