@@ -5,12 +5,15 @@ import threading as thread
 
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
+from utils import send_msg
+
 logger = logging.getLogger(__file__)
 
 class basic_bolt(thread.Thread):
     _in_sockets = {}
-    _out_sockets = {}
-    id = None
+    _out_socket = None
+    _out_streams = {}
+    _id = None
     _poller = zmq.Poller()
     _in_tuple_count = 0
     _out_tuple_count = 0
@@ -28,51 +31,51 @@ class basic_bolt(thread.Thread):
         pass
 
     def emit(self, data=None):
-        for s in self._out_sockets.values():
-            s.send(data)
+        send_msg(self._socket, self._streams, data)
         self._out_tuple_count += 1
 
-    def init_in_sockets(self, id, type, servers):
+    def init_in_sockets(self, stream_id, servers, id):
         try:
-            socket = zmq.Context().socket(type)
+            socket = zmq.Context().socket(zmq.SUB)
             for s in servers:
                 socket.connect("tcp://%s" % s)
-            self._in_sockets[id] = socket
+            topic = '%s_%d' % (stream_id, id)
+            socket.setsockopt(zmq.SUBSCRIBE, topic)
+            self._in_sockets[stream_id] = socket
             self._poller.register(socket, zmq.POLLIN)
             return True
         except Exception as ex:
             logger.warn(str(ex))
             return False
 
-    def init_out_sockets(self, id, type, ports):
+    def init_out_socket(self, port):
         try:
-            s = zmq.Context().socket(type)
-            for port in ports:
-                try:
-                    s.bind("tcp://127.0.0.1:%s" % port)
-                except:
-                    pass
-            self._out_sockets[id] = s
-            return port
-        except Exception as ex:
-            logger.warn(str(ex))
-            return None
-
-    def add_server(self, id, server):
-        try:
-            self._in_sockets[id].connect("tcp://%s" % server)
+            self._out_socket = zmq.Context().socket(zmq.PUB)
+            self._out_socket.bind("tcp://127.0.0.1:%d" % port)
             return True
         except Exception as ex:
             logger.warn(str(ex))
             return False
 
-    def del_server(self, id, server):
+    def add_server(self, stream_id, server):
         try:
-            self._in_sockets[id].disconnect("tcp://%s" % server)
+            self._in_sockets[stream_id].connect("tcp://%s" % server)
             return True
         except Exception as ex:
             logger.warn(str(ex))
             return False
+
+    def del_server(self, stream_id, server):
+        try:
+            self._in_sockets[stream_id].disconnect("tcp://%s" % server)
+            return True
+        except Exception as ex:
+            logger.warn(str(ex))
+            return False
+
+    def set_subscrption(self, stream_id, id):
+        topic = '%s_%d' % (stream_id, id)
+        self._in_sockets[stream_id].setsockopt(zmq.SUBSCRIBE, topic)
 
     def register_zk_node(self):
         pass
@@ -82,6 +85,6 @@ class basic_bolt(thread.Thread):
             socks = dict(self._poller.poll())
             for s in self._in_sockets.values():
                 if socks.get(s) == zmq.POLLIN:
-                    data = s.recv()
+                    msg_id, data = s.recv_pyobj()
                     self.process(data)
                     self._in_tuple_count += 1
