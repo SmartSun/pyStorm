@@ -86,6 +86,6 @@ class basic_bolt(thread.Thread):
             socks = dict(self._poller.poll())
             for s in self._in_sockets.values():
                 if socks.get(s) == zmq.POLLIN:
-                    msg_id, component_name, data = s.recv_pyobj()
+                    msg_id, component_name, data = s.recv_json()
                     self.process(data, component_name)
                     self._in_tuple_count += 1
