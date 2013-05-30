@@ -15,7 +15,7 @@ class basic_spout(thread.Thread):
 	_id = None
 	_component_name = None
 	_tuple_count = 0
-	_streams = {}
+	_streams = []
 
 	def __init__(self):
 		"""
@@ -32,6 +32,7 @@ class basic_spout(thread.Thread):
 	def emit(self, data=None):
 		send_msg(self._socket, self._streams, self._component_name, data)
 		self._tuple_count += 1
+
 
 	def init_socket(self, port):
 		try:

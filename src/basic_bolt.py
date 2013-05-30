@@ -12,7 +12,7 @@ logger = logging.getLogger(__file__)
 class basic_bolt(thread.Thread):
     _in_sockets = {}
     _out_socket = None
-    _out_streams = {}
+    _out_streams = []
     _id = None
     _component_name = None
     _poller = zmq.Poller()
@@ -34,6 +34,7 @@ class basic_bolt(thread.Thread):
     def emit(self, data=None):
         send_msg(self._socket, self._out_streams, self._component_name, data)
         self._out_tuple_count += 1
+
 
     def init_in_sockets(self, stream_id, servers, id):
         try:
