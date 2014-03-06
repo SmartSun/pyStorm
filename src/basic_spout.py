@@ -11,7 +11,7 @@ class BasicSpout(thread.Thread):
     _id = None
     _component_name = None
     _tuple_count = 0
-    _streams = []
+    _out_streams = []
 
     def next_tuple(self):
         """
@@ -20,7 +20,7 @@ class BasicSpout(thread.Thread):
         raise NotImplementedError()
 
     def emit(self, data=None):
-        send_msg(self._socket, self._streams, self._component_name, data)
+        send_msg(self._socket, self._out_streams, self._component_name, data)
         self._tuple_count += 1
 
     def init_socket(self, port):
