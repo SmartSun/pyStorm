@@ -1,8 +1,14 @@
 import logging
 import uuid
 import random
+import os
+import sys
+import zookeeper
 from constants import GroupingType
-#from conf import site
+
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+
+from conf import site
 
 logger = logging.getLogger(__file__)
 
@@ -35,9 +41,11 @@ class Topology():
     _components = []
     _server_graph = {}
     _current_bolt = None
+    _zk = None
 
     def __init__(self):
         self._id = str(uuid.uuid1())
+        self._zk = zookeeper.init(site.ZK_HOSTS)
 
     def _get_component_by_name(self, component_name):
         for component in self._components:
@@ -82,14 +90,26 @@ class Topology():
 
     def _get_avail_workers(self):
         """
-        {
+        Return: {
             ip: [ports]
         }
         """
-        return {}
+        avail_workers = {}
+        server_node_list = zookeeper.get_children(
+            self._zk, site.ZK_ROOT_NODE + '/workers'
+        )
+        for node in server_node_list:
+            path = '/'.join([site.ZK_ROOT_NODE, 'workers', node])
+            status = int(zookeeper.get(self._zk, path))
+            if status == 0:
+                l = avail_workers.setdefault(node.split(':')[0], [])
+                l.append(node.split(':')[1])
+        return avail_workers
 
     def _update_server_status_in_zk(self, servers):
-        pass
+        for s in servers:
+            path = '/'.join([site.ZK_ROOT_NODE, 'workers', s])
+            zookeeper.set(self._zk, path, '1')
 
     def _set_servers(self, component, workers, all_avail_workers):
         servers = random.sample(all_avail_workers, workers)
@@ -119,7 +139,9 @@ class Topology():
                 return False
             remain_workers = component.workers
             while remain_workers > len(all_avail_workers):
-                self._set_servers(component, len(all_avail_workers), all_avail_workers)
+                self._set_servers(
+                    component, len(all_avail_workers), all_avail_workers
+                )
                 remain_workers -= len(all_avail_workers)
             self._set_servers(component, remain_workers, all_avail_workers)
             servers_list.extend(component.servers)
@@ -130,3 +152,4 @@ class Topology():
                 return False
             if not self._begin_server_in_zk(ip):
                 return False
+        return True

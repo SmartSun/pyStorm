@@ -32,9 +32,6 @@ class BasicSpout(thread.Thread):
             logger.warn(str(ex))
             return False
 
-    def register_zk_node(self):
-        pass
-
     def run(self):
         while 1:
             self.next_tuple()

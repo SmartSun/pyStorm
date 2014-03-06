@@ -69,9 +69,6 @@ class BasicBolt(thread.Thread):
         topic = '%s_%d' % (stream_id, id)
         self._in_sockets[stream_id].setsockopt(zmq.SUBSCRIBE, topic)
 
-    def register_zk_node(self):
-        pass
-
     def run(self):
         while 1:
             socks = dict(self._poller.poll())
