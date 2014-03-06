@@ -1,40 +1,30 @@
 import zmq
-import os, sys
 import logging
 import threading as thread
-
-sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
-
 from utils import send_msg
 
 logger = logging.getLogger(__file__)
 
-class basic_bolt(thread.Thread):
+
+class BasicBolt(thread.Thread):
     _in_sockets = {}
     _out_socket = None
     _out_streams = []
     _id = None
     _component_name = None
-    _poller = zmq.Poller()
     _in_tuple_count = 0
     _out_tuple_count = 0
-
-    def __init__(self):
-        """
-        TODO: override this method with your own initial code
-        """
-        pass
+    _poller = zmq.Poller()
 
     def process(self, data=None, component_name=None):
         """
         TODO: override this method with your own process code
         """
-        pass
+        raise NotImplementedError()
 
     def emit(self, data=None):
-        send_msg(self._socket, self._out_streams, self._component_name, data)
+        send_msg(self._out_socket, self._out_streams, self._component_name, data)
         self._out_tuple_count += 1
-
 
     def init_in_sockets(self, stream_id, servers, id):
         try:
@@ -75,7 +65,7 @@ class basic_bolt(thread.Thread):
             logger.warn(str(ex))
             return False
 
-    def set_subscrption(self, stream_id, id):
+    def set_subscription(self, stream_id, id):
         topic = '%s_%d' % (stream_id, id)
         self._in_sockets[stream_id].setsockopt(zmq.SUBSCRIBE, topic)
 
